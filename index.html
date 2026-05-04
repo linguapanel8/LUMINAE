@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LUMINAE — Light Up Your Memories</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#000d07" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- BOOT SCREEN -->
+  <div id="boot-screen">
+    <div class="boot-grid"></div>
+    <div class="boot-content">
+      <div class="boot-logo">
+        <div class="logo-bracket">[</div>
+        <div class="logo-text">LUMINAE</div>
+        <div class="logo-bracket">]</div>
+      </div>
+      <div class="boot-tagline">LIGHT UP YOUR MEMORIES</div>
+      <div class="boot-bar-wrap"><div class="boot-bar" id="boot-bar"></div></div>
+      <div class="boot-status" id="boot-status">INITIALIZING NEURAL ENGINE...</div>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app" class="hidden">
+
+    <!-- HEADER -->
+    <header class="app-header">
+      <div class="header-left">
+        <span class="hdr-bracket">[</span>
+        <span class="hdr-logo">LUMINAE</span>
+        <span class="hdr-bracket">]</span>
+      </div>
+      <div class="header-center">
+        <span class="hdr-status-dot" id="status-dot"></span>
+        <span class="hdr-status-text" id="status-text">SYSTEM READY</span>
+      </div>
+      <div class="header-right">
+        <span class="hdr-version">v1.0.0</span>
+      </div>
+    </header>
+
+    <!-- SCAN LINE -->
+    <div class="global-scan"></div>
+
+    <!-- MAIN CONTENT -->
+    <main class="app-main">
+
+      <!-- LEFT PANEL: PROBE -->
+      <section class="panel panel-probe">
+        <div class="panel-header">
+          <span class="panel-title">// FACE_PROBE</span>
+          <span class="panel-hint">upload subject</span>
+        </div>
+
+        <div class="probe-zone" id="probe-zone">
+          <div class="probe-corners">
+            <span class="pc tl"></span><span class="pc tr"></span>
+            <span class="pc bl"></span><span class="pc br"></span>
+          </div>
+          <div class="probe-inner" id="probe-inner">
+            <div class="probe-icon">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                <circle cx="24" cy="19" r="8" stroke="#00ff6a" stroke-width="1.5" stroke-dasharray="4 2"/>
+                <path d="M8 42c0-8.8 7.2-14 16-14s16 5.2 16 14" stroke="#00ff6a" stroke-width="1.5"/>
+                <line x1="24" y1="4" x2="24" y2="8" stroke="#00ff6a" stroke-width="1"/>
+                <line x1="24" y1="30" x2="24" y2="34" stroke="#00ff6a" stroke-width="1"/>
+                <line x1="6" y1="19" x2="10" y2="19" stroke="#00ff6a" stroke-width="1"/>
+                <line x1="38" y1="19" x2="42" y2="19" stroke="#00ff6a" stroke-width="1"/>
+              </svg>
+            </div>
+            <div class="probe-label">DROP SELFIE HERE</div>
+            <div class="probe-sublabel">or click to browse</div>
+            <button class="btn-upload" onclick="document.getElementById('probe-input').click()">SELECT FILE</button>
+          </div>
+          <canvas id="probe-canvas" class="hidden"></canvas>
+          <input type="file" id="probe-input" accept="image/*" class="hidden" />
+        </div>
+
+        <div class="probe-data hidden" id="probe-data">
+          <div class="data-row"><span class="data-key">STATUS</span><span class="data-val" id="probe-status-val">—</span></div>
+          <div class="data-row"><span class="data-key">FACES FOUND</span><span class="data-val" id="probe-faces-val">—</span></div>
+          <div class="data-row"><span class="data-key">CONFIDENCE</span><span class="data-val" id="probe-conf-val">—</span></div>
+        </div>
+      </section>
+
+      <!-- CENTER PANEL: ACTIONS -->
+      <section class="panel panel-control">
+        <div class="panel-header">
+          <span class="panel-title">// CONTROL</span>
+        </div>
+
+        <div class="ctrl-actions">
+          <button class="ctrl-btn primary" id="btn-upload-event" onclick="document.getElementById('event-input').click()">
+            <span class="btn-icon">▲</span>
+            <span class="btn-label">UPLOAD EVENT PHOTOS</span>
+            <span class="btn-count" id="event-count">0 files</span>
+          </button>
+          <input type="file" id="event-input" accept="image/*" multiple class="hidden" />
+
+          <button class="ctrl-btn action" id="btn-scan" disabled>
+            <span class="btn-icon">◈</span>
+            <span class="btn-label">RUN FACE SCAN</span>
+            <span class="btn-sub">match &amp; identify</span>
+          </button>
+
+          <button class="ctrl-btn secondary" id="btn-download" disabled>
+            <span class="btn-icon">▼</span>
+            <span class="btn-label">DOWNLOAD MATCHES</span>
+            <span class="btn-sub">export as ZIP</span>
+          </button>
+
+          <button class="ctrl-btn ghost" id="btn-reset" onclick="resetAll()">
+            <span class="btn-icon">↺</span>
+            <span class="btn-label">RESET SESSION</span>
+          </button>
+        </div>
+
+        <!-- STATS -->
+        <div class="ctrl-stats">
+          <div class="stat-box">
+            <div class="stat-val" id="stat-total">0</div>
+            <div class="stat-key">TOTAL PHOTOS</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stat-matched">0</div>
+            <div class="stat-key">MATCHED</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stat-dupes">0</div>
+            <div class="stat-key">DUPLICATES</div>
+          </div>
+        </div>
+
+        <!-- THRESHOLD -->
+        <div class="threshold-wrap">
+          <div class="threshold-label">
+            <span>MATCH THRESHOLD</span>
+            <span id="threshold-val">60%</span>
+          </div>
+          <input type="range" id="threshold-slider" min="30" max="90" value="60" />
+        </div>
+
+        <!-- PROGRESS -->
+        <div class="progress-wrap hidden" id="progress-wrap">
+          <div class="progress-label">
+            <span id="progress-label-text">SCANNING...</span>
+            <span id="progress-pct">0%</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+        </div>
+      </section>
+
+      <!-- RIGHT PANEL: RESULTS -->
+      <section class="panel panel-results">
+        <div class="panel-header">
+          <span class="panel-title">// MATCH_RESULTS</span>
+          <span class="panel-hint" id="results-count">0 found</span>
+        </div>
+
+        <div class="results-empty" id="results-empty">
+          <div class="empty-grid"></div>
+          <div class="empty-text">
+            <div class="empty-icon">[ ? ]</div>
+            <div>NO SCAN INITIATED</div>
+            <div class="empty-sub">upload photos &amp; run scan to begin</div>
+          </div>
+        </div>
+
+        <div class="results-grid hidden" id="results-grid"></div>
+      </section>
+
+    </main>
+
+    <!-- LIGHTBOX -->
+    <div class="lightbox hidden" id="lightbox" onclick="closeLightbox()">
+      <div class="lb-content" onclick="event.stopPropagation()">
+        <div class="lb-corners">
+          <span class="lc tl"></span><span class="lc tr"></span>
+          <span class="lc bl"></span><span class="lc br"></span>
+        </div>
+        <canvas id="lb-canvas"></canvas>
+        <div class="lb-meta">
+          <div class="lb-data-row"><span class="lb-key">FILE</span><span class="lb-val" id="lb-filename">—</span></div>
+          <div class="lb-data-row"><span class="lb-key">CONFIDENCE</span><span class="lb-val" id="lb-confidence">—</span></div>
+          <div class="lb-data-row"><span class="lb-key">FACES IN PHOTO</span><span class="lb-val" id="lb-faces">—</span></div>
+        </div>
+        <button class="lb-close" onclick="closeLightbox()">[ CLOSE ]</button>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast hidden" id="toast"></div>
+
+  </div>
+
+  <!-- face-api.js -->
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <!-- JSZip for download -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

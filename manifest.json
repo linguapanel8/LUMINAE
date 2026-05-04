@@ -1,0 +1,22 @@
+{
+  "name": "LUMINAE — Light Up Your Memories",
+  "short_name": "LUMINAE",
+  "description": "Event face recognition app powered by face-api.js",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000d07",
+  "theme_color": "#00ff6a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
