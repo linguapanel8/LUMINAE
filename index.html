@@ -360,18 +360,22 @@ input[type=range].amber-range::-webkit-slider-thumb{background:var(--amber);box-
       <div style="display:flex;flex-direction:column;gap:6px">
         <div class="pt amber" style="font-size:8px;">QUICK EXPLORE</div>
         <div class="gcats">
-          <button class="gcat" onclick="glimpseCategory('nature')">NATURE</button>
-          <button class="gcat" onclick="glimpseCategory('space galaxy')">SPACE</button>
-          <button class="gcat" onclick="glimpseCategory('ocean waves')">OCEAN</button>
-          <button class="gcat" onclick="glimpseCategory('mountain landscape')">MOUNTAINS</button>
-          <button class="gcat" onclick="glimpseCategory('city night lights')">CITY NIGHT</button>
-          <button class="gcat" onclick="glimpseCategory('forest trees')">FOREST</button>
-          <button class="gcat" onclick="glimpseCategory('desert sand dunes')">DESERT</button>
-          <button class="gcat" onclick="glimpseCategory('aurora borealis')">AURORA</button>
-          <button class="gcat" onclick="glimpseCategory('underwater coral')">UNDERWATER</button>
-          <button class="gcat" onclick="glimpseCategory('volcano lava')">VOLCANO</button>
-          <button class="gcat" onclick="glimpseCategory('wildlife animals')">WILDLIFE</button>
-          <button class="gcat" onclick="glimpseCategory('architecture')">ARCHITECTURE</button>
+          <button class="gcat" data-q="cricket" onclick="glimpseCategory('cricket')">🏏 CRICKET</button>
+          <button class="gcat" data-q="Virat Kohli" onclick="glimpseCategory('Virat Kohli')">KOHLI</button>
+          <button class="gcat" data-q="MS Dhoni" onclick="glimpseCategory('MS Dhoni')">DHONI</button>
+          <button class="gcat" data-q="Sachin Tendulkar" onclick="glimpseCategory('Sachin Tendulkar')">SACHIN</button>
+          <button class="gcat" data-q="Rohit Sharma cricket" onclick="glimpseCategory('Rohit Sharma cricket')">ROHIT</button>
+          <button class="gcat" data-q="IPL cricket" onclick="glimpseCategory('IPL cricket')">IPL</button>
+          <button class="gcat" data-q="football FIFA" onclick="glimpseCategory('football FIFA')">⚽ FOOTBALL</button>
+          <button class="gcat" data-q="Lionel Messi" onclick="glimpseCategory('Lionel Messi')">MESSI</button>
+          <button class="gcat" data-q="nature landscape" onclick="glimpseCategory('nature landscape')">🌿 NATURE</button>
+          <button class="gcat" data-q="space galaxy nebula" onclick="glimpseCategory('space galaxy nebula')">🌌 SPACE</button>
+          <button class="gcat" data-q="ocean waves" onclick="glimpseCategory('ocean waves')">OCEAN</button>
+          <button class="gcat" data-q="mountain landscape" onclick="glimpseCategory('mountain landscape')">MOUNTAINS</button>
+          <button class="gcat" data-q="aurora borealis" onclick="glimpseCategory('aurora borealis')">AURORA</button>
+          <button class="gcat" data-q="wildlife animals" onclick="glimpseCategory('wildlife animals')">WILDLIFE</button>
+          <button class="gcat" data-q="architecture building" onclick="glimpseCategory('architecture building')">ARCHITECTURE</button>
+          <button class="gcat" data-q="city night lights" onclick="glimpseCategory('city night lights')">CITY NIGHT</button>
         </div>
       </div>
 
@@ -723,64 +727,163 @@ function resetFace(){
 }
 
 // ── GLIMPSE MODULE ─────────────────────────────────────────────────
-// Uses Picsum + Unsplash Source (no API key needed)
-const SOURCES=[
-  (q,n)=>`https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=${n}&client_id=DummyKey`,
-  (q,n)=>null
-];
+// Uses Wikimedia Commons API — free, no key, truly dynamic
+// Supports: cricketers, celebrities, nature, space, landmarks, anything
 
-// Curated keyword→Unsplash topic ID map for reliable results
-const TOPIC_MAP={
-  'nature':'nature','space galaxy':'universe','ocean waves':'ocean','mountain landscape':'mountain','city night lights':'city-architecture','forest trees':'nature','desert sand dunes':'nature','aurora borealis':'nature','underwater coral':'underwater','volcano lava':'nature','wildlife animals':'animals','architecture':'architecture-interior'};
+let glimpsePage=1;
+let currentQuery='';
 
 async function doGlimpseSearch(){
   const q=document.getElementById('gsearch').value.trim();
   if(!q)return;
-  loadGlimpseImages(q);
+  glimpsePage=1;
+  currentQuery=q;
+  await loadGlimpseImages(q,1,false);
 }
 
 function glimpseCategory(q){
   document.getElementById('gsearch').value=q;
-  document.querySelectorAll('.gcat').forEach(b=>b.classList.toggle('sel',b.textContent.toLowerCase()===q.split(' ')[0]));
-  loadGlimpseImages(q);
+  document.querySelectorAll('.gcat').forEach(b=>b.classList.toggle('sel',b.getAttribute('data-q')===q));
+  glimpsePage=1;currentQuery=q;
+  loadGlimpseImages(q,1,false);
 }
 
-async function loadGlimpseImages(query){
+async function loadGlimpseImages(query,page,append){
   setStatus('SCANNING WORLD PLANET...');
   document.getElementById('gbtn').disabled=true;
   document.getElementById('gpwrap').classList.remove('h');
-  document.getElementById('gempty').classList.add('h');
-  document.getElementById('ggrid').classList.add('h');
-  document.getElementById('ggrid').innerHTML='';
-  glimpseImages=[];
-
-  // Use Picsum for reliable no-key images + Unsplash Source
-  // Generate 24 varied images via Picsum with seeds based on query
-  const count=24;
-  const seed=hashStr(query);
-  const imgs=[];
-
-  // Use Unsplash Source (public, no key needed)
-  const keywords=encodeURIComponent(query);
-  for(let i=0;i<count;i++){
-    imgs.push({
-      url:`https://source.unsplash.com/800x600/?${keywords}&sig=${seed+i}`,
-      thumb:`https://source.unsplash.com/400x300/?${keywords}&sig=${seed+i}`,
-      title:query.charAt(0).toUpperCase()+query.slice(1)+` #${i+1}`,
-      author:'Unsplash Contributor',
-      id:seed+i
-    });
+  if(!append){
+    document.getElementById('gempty').classList.add('h');
+    document.getElementById('ggrid').classList.add('h');
+    document.getElementById('ggrid').innerHTML='';
+    glimpseImages=[];
   }
 
-  glimpseImages=imgs;
-  document.getElementById('gloaded').textContent=imgs.length;
-  document.getElementById('gresol').textContent='HD';
-  document.getElementById('gcnt').textContent=imgs.length+' images';
+  // Strategy: fetch from BOTH Wikimedia Commons AND Wikipedia in parallel for diversity
+  const [wikiCommons, wikipedia] = await Promise.allSettled([
+    fetchWikimediaCommons(query, page),
+    fetchWikipediaImages(query, page)
+  ]);
+
+  let imgs=[];
+  if(wikiCommons.status==='fulfilled') imgs=[...imgs,...wikiCommons.value];
+  if(wikipedia.status==='fulfilled') imgs=[...imgs,...wikipedia.value];
+
+  // Deduplicate by URL
+  const seen=new Set(glimpseImages.map(i=>i.url));
+  imgs=imgs.filter(i=>i.url&&!seen.has(i.url)&&i.url.match(/\.(jpg|jpeg|png|webp|gif)/i));
+
+  // Shuffle for variety
+  imgs=shuffle(imgs);
+
+  if(!append) glimpseImages=imgs;
+  else glimpseImages=[...glimpseImages,...imgs];
+
+  document.getElementById('gloaded').textContent=glimpseImages.length;
+  document.getElementById('gresol').textContent='FREE';
+  document.getElementById('gcnt').textContent=glimpseImages.length+' images';
   document.getElementById('gpwrap').classList.add('h');
   document.getElementById('gbtn').disabled=false;
   renderGlimpse();
-  setStatus(`WORLD PLANET — ${imgs.length} IMAGES LOADED`);
-  showToast(`[ ${imgs.length} IMAGES LOADED ]`,'amber');
+
+  if(!glimpseImages.length){
+    document.getElementById('gempty').classList.remove('h');
+    document.getElementById('ggrid').classList.add('h');
+    setStatus('NO IMAGES FOUND — TRY DIFFERENT KEYWORDS');
+    showToast('[ NO RESULTS — TRY DIFFERENT SEARCH ]','amber');
+    return;
+  }
+  setStatus(`WORLD PLANET — ${glimpseImages.length} IMAGES LOADED`);
+  showToast(`[ ${glimpseImages.length} IMAGES LOADED ]`,'amber');
+}
+
+// Fetch from Wikimedia Commons (CORS-friendly, no key needed)
+async function fetchWikimediaCommons(query, page){
+  const offset=(page-1)*20;
+  // Use both text search and category search
+  const url=`https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*`+
+    `&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=6`+
+    `&gsrlimit=30&gsroffset=${offset}`+
+    `&prop=imageinfo&iiprop=url|extmetadata|size&iiurlwidth=400`;
+  try{
+    const r=await fetch(url);
+    const d=await r.json();
+    if(!d.query||!d.query.pages) return [];
+    return Object.values(d.query.pages).map(p=>{
+      const ii=p.imageinfo&&p.imageinfo[0];
+      if(!ii||!ii.thumburl) return null;
+      const meta=ii.extmetadata||{};
+      return{
+        url:ii.url,
+        thumb:ii.thumburl,
+        title:(meta.ObjectName&&meta.ObjectName.value)||p.title.replace('File:','').replace(/\.[^.]+$/,''),
+        author:(meta.Artist&&meta.Artist.value.replace(/<[^>]+>/g,''))||'Wikimedia Commons',
+        license:(meta.LicenseShortName&&meta.LicenseShortName.value)||'Free',
+        id:'wc_'+p.pageid,
+        source:'COMMONS'
+      };
+    }).filter(Boolean);
+  }catch(e){console.warn('Commons err',e);return [];}
+}
+
+// Fetch from Wikipedia article images (great for people like cricketers)
+async function fetchWikipediaImages(query, page){
+  try{
+    // First find matching Wikipedia articles
+    const searchUrl=`https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*`+
+      `&list=search&srsearch=${encodeURIComponent(query)}&srlimit=8&sroffset=${(page-1)*8}`;
+    const sr=await fetch(searchUrl);
+    const sd=await sr.json();
+    if(!sd.query||!sd.query.search||!sd.query.search.length) return [];
+
+    // Get images from top matching articles in parallel
+    const pageIds=sd.query.search.slice(0,6).map(r=>r.pageid).join('|');
+    const imgUrl=`https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*`+
+      `&pageids=${pageIds}&prop=images&imlimit=10`;
+    const ir=await fetch(imgUrl);
+    const id2=await ir.json();
+    if(!id2.query||!id2.query.pages) return [];
+
+    // Collect all image titles
+    const imgTitles=[];
+    Object.values(id2.query.pages).forEach(p=>{
+      const pageName=sd.query.search.find(s=>s.pageid===p.pageid);
+      if(p.images) p.images.filter(i=>i.title.match(/\.(jpg|jpeg|png)/i)&&!i.title.match(/flag|logo|icon|map|seal|coa|ribbon|stub/i)).slice(0,4).forEach(i=>imgTitles.push({title:i.title,article:pageName?pageName.title:''}));
+    });
+
+    if(!imgTitles.length) return [];
+
+    // Batch fetch image URLs
+    const titles=imgTitles.slice(0,20).map(i=>i.title).join('|');
+    const infoUrl=`https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*`+
+      `&titles=${encodeURIComponent(titles)}&prop=imageinfo&iiprop=url|extmetadata|size&iiurlwidth=400`;
+    const infor=await fetch(infoUrl);
+    const infod=await infor.json();
+    if(!infod.query||!infod.query.pages) return [];
+
+    return Object.values(infod.query.pages).map((p,i)=>{
+      const ii=p.imageinfo&&p.imageinfo[0];
+      if(!ii||!ii.url) return null;
+      const meta=ii.extmetadata||{};
+      const matchedTitle=imgTitles[i];
+      return{
+        url:ii.url,
+        thumb:ii.thumburl||ii.url,
+        title:(matchedTitle&&matchedTitle.article)||p.title.replace('File:','').replace(/\.[^.]+$/,''),
+        author:(meta.Artist&&meta.Artist.value.replace(/<[^>]+>/g,''))||'Wikipedia',
+        license:(meta.LicenseShortName&&meta.LicenseShortName.value)||'Free',
+        id:'wp_'+p.pageid,
+        source:'WIKIPEDIA'
+      };
+    }).filter(Boolean);
+  }catch(e){console.warn('Wikipedia err',e);return [];}
+}
+
+// Load more results
+async function loadMore(){
+  if(!currentQuery)return;
+  glimpsePage++;
+  await loadGlimpseImages(currentQuery,glimpsePage,true);
 }
 
 function renderGlimpse(){
@@ -788,22 +891,31 @@ function renderGlimpse(){
   grid.innerHTML='';
   if(!glimpseImages.length){document.getElementById('gempty').classList.remove('h');grid.classList.add('h');return;}
   document.getElementById('gempty').classList.add('h');grid.classList.remove('h');
-  glimpseImages.forEach((img,i)=>{
+  glimpseImages.forEach((img)=>{
     const card=document.createElement('div');card.className='gc';
     card.onclick=()=>openGlb(img);
     const im=document.createElement('img');
     im.src=img.thumb;im.alt=img.title;im.loading='lazy';
-    im.onerror=()=>{im.src=`https://picsum.photos/seed/${img.id}/400/300`;};
+    im.onerror=()=>{card.style.display='none';};
     const meta=document.createElement('div');meta.className='gc-meta';
-    meta.innerHTML=`<div class="gc-title">${img.title}</div><div class="gc-sub">${img.author}</div>`;
-    const badge=document.createElement('div');badge.className='gc-badge';badge.textContent='◈ HD';
+    const shortTitle=img.title.length>40?img.title.slice(0,38)+'…':img.title;
+    const shortAuthor=img.author.length>30?img.author.slice(0,28)+'…':img.author;
+    meta.innerHTML=`<div class="gc-title">${shortTitle}</div><div class="gc-sub">${shortAuthor}</div>`;
+    const badge=document.createElement('div');badge.className='gc-badge';
+    badge.textContent=img.source==='WIKIPEDIA'?'◈ WIKI':'◈ COMMONS';
     const saveBtn=document.createElement('button');
-    saveBtn.style.cssText='position:absolute;bottom:35px;right:5px;background:var(--bg);border:1px solid var(--amberdim);color:var(--amber);font-family:var(--mono);font-size:7px;padding:2px 5px;cursor:pointer;';
+    saveBtn.style.cssText='position:absolute;bottom:35px;right:5px;background:var(--bg);border:1px solid var(--amberdim);color:var(--amber);font-family:var(--mono);font-size:7px;padding:2px 5px;cursor:pointer;z-index:2';
     saveBtn.textContent='+ SAVE';
     saveBtn.onclick=e=>{e.stopPropagation();saveGlimpseImg(img);};
     card.appendChild(im);card.appendChild(badge);card.appendChild(saveBtn);card.appendChild(meta);
     grid.appendChild(card);
   });
+  // Load More tile
+  const more=document.createElement('div');more.className='gc';
+  more.style.cssText='display:flex;align-items:center;justify-content:center;min-height:160px;border-color:var(--amberdk);cursor:pointer;';
+  more.innerHTML='<div style="text-align:center;color:var(--amberdim);font-size:10px;letter-spacing:.1em">[ LOAD MORE ]<div style="font-size:8px;color:var(--faint);margin-top:4px">fetch next batch</div></div>';
+  more.onclick=loadMore;
+  grid.appendChild(more);
 }
 
 function openGlb(img){
@@ -872,6 +984,7 @@ function qhash(cv){
   for(let i=0;i<d.length;i+=4){h=((h<<5)-h)+d[i]+d[i+1]+d[i+2];h|=0;}return h;
 }
 function hashStr(s){let h=0;for(let i=0;i<s.length;i++){h=(h<<5)-h+s.charCodeAt(i);h|=0;}return Math.abs(h);}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function wait(ms){return new Promise(r=>setTimeout(r,ms));}
 
 window.addEventListener('DOMContentLoaded',boot);
